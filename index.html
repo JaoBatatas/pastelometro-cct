@@ -125,6 +125,7 @@
 </div>
 
 <script>
+    // ⚠️ SUBSTITUA PELO URL COPIADO DO SEU GOOGLE APPS SCRIPT
     const API_URL = "https://script.google.com/macros/s/AKfycbwQEP1QPSZ5SrKzPRqw5k-yDI4Junq0_Bx5KUe4Ry94VOjlNslWWx4aB2dEpdRFOBXA/exec";
     
     let chart;
@@ -137,7 +138,7 @@
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     }
 
-    // Funções Estatísticas Adicionais (Caso o Backend envie a array bruta)
+    // Funções Estatísticas
     function calcularEstatisticas(array) {
         if (!array || array.length === 0) return null;
         let n = array.length;
@@ -156,8 +157,15 @@
             freq[v] = (freq[v] || 0) + 1;
             if (freq[v] > maxFreq) maxFreq = freq[v];
         });
-        let modas = Object.keys(freq).filter(k => freq[k] === maxFreq).map(Number);
-        let modaStr = modas.map(m => minutosParaHora(m)).join(' e ');
+        
+        let modaStr = "--:--";
+        // Só considera moda se o horário se repetir mais do que uma vez (maxFreq > 1)
+        if (maxFreq > 1) {
+            let modas = Object.keys(freq).filter(k => freq[k] === maxFreq).map(Number);
+            modaStr = modas.map(m => minutosParaHora(m)).join(' e ');
+        } else {
+            modaStr = "Amodal"; // Nenhum valor se repete
+        }
 
         let varianciaPop = array.reduce((a, b) => a + Math.pow(b - mu, 2), 0) / n;
         let sigma = Math.sqrt(varianciaPop);
@@ -179,13 +187,11 @@
         let pontos = [];
         let sigmaGrafico = (!sigma || sigma === 0) ? 1 : sigma; // Prevenção de divisão por zero
         
-        // Assegura que o gráfico mostra pelo menos uma janela de 1 hora para cada lado
         let margem = Math.max(3 * sigmaGrafico, 60); 
         
         let inicio = mu - margem;
         let fim = mu + margem;
         
-        // Alta resolução para uma curva muito mais suave
         let passo = (fim - inicio) / 200;
 
         for (let x = inicio; x <= fim; x += passo) {
@@ -205,7 +211,6 @@
         document.getElementById('val-mediana').innerText = data.mediana ? minutosParaHora(data.mediana) : '--:--';
         document.getElementById('val-moda').innerText = data.modaStr || '--:--';
         
-        // Exibindo com 1 casa decimal para maior precisão
         document.getElementById('val-sigma').innerText = data.sigma ? `${data.sigma.toFixed(1)} min` : '- min';
         document.getElementById('val-s').innerText = data.s ? `${data.s.toFixed(1)} min` : '- min';
         document.getElementById('val-total').innerText = data.total;
@@ -257,7 +262,7 @@
                         titleColor: '#ff9800',
                         callbacks: {
                             title: function(context) { return 'Hora: ' + minutosParaHora(context[0].parsed.x); },
-                            label: function(context) { return 'Probabilidade relativa: ' + (context[0].parsed.y * 100).toFixed(2) + '%'; }
+                            label: function(context) { return 'Probabilidade relativa: ' + (context.parsed.y * 100).toFixed(2) + '%'; }
                         }
                     }
                 }
@@ -268,13 +273,10 @@
     // Função para carregar os dados iniciais ao abrir a página
     async function carregarDados() {
         try {
-            // Chamada REAL para a sua API do Google Sheets
             let res = await fetch(`${API_URL}?action=consultar`);
             let respostaAPI = await res.json(); 
             
-            // Suporta tanto se a API devolver a array bruta quanto as estatísticas prontas
             let dados = Array.isArray(respostaAPI) ? calcularEstatisticas(respostaAPI) : respostaAPI;
-            
             atualizarDashboard(dados);
         } catch (err) {
             console.error("Erro ao buscar dados:", err);
@@ -290,7 +292,6 @@
         loading.style.display = 'block';
 
         try {
-            // Chamada REAL para a sua API do Google Sheets
             let res = await fetch(`${API_URL}?action=registrar`);
             let respostaAPI = await res.json(); 
             
