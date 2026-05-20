@@ -187,6 +187,18 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbwQEP1QPSZ5SrKzPRqw5k-yDI4Junq0_Bx5KUe4Ry94VOjlNslWWx4aB2dEpdRFOBXA/exec";
     
     let chart;
+    let userIp = "0.0.0.0";
+
+    // Obtém o IP do usuário real de forma síncrona/inicial
+    async function obterIP() {
+        try {
+            let resIp = await fetch('https://api.ipify.org?format=json');
+            let dataIp = await resIp.json();
+            userIp = dataIp.ip;
+        } catch (e) {
+            console.error("Não foi possível obter o IP do usuário. Usando fallback.", e);
+        }
+    }
 
     function atualizarInterfaceDeStatus(status, hora) {
         const btnPronto = document.getElementById('btn-pronto');
@@ -296,7 +308,6 @@
         let datasets = [];
         const ctx = document.getElementById('gaussChart').getContext('2d');
         
-        // Determina o intervalo do Eixo X para as duas curvas se encontrarem no mesmo gráfico
         let minX = 9999;
         let maxX = 0;
         
@@ -370,7 +381,6 @@
                         callbacks: {
                             title: function(context) { return 'Hora: ' + minutosParaHora(context[0].parsed.x); },
                             label: function(context) { 
-                                let c = context.dataset.borderColor;
                                 return context.dataset.label + ': ' + (context.parsed.y * 100).toFixed(2) + '%'; 
                             }
                         }
@@ -382,12 +392,23 @@
 
     async function carregarDados() {
         try {
-            let res = await fetch(`${API_URL}?action=consultar`);
+            await obterIP(); // Garante a busca do IP real antes de consultar a API
+            let res = await fetch(`${API_URL}?action=consultar&ip=${userIp}`);
             let respostaAPI = await res.json(); 
+
+            // Se o usuário estiver na lista de banidos, bloqueia a tela inteira imediatamente
+            if (respostaAPI.status === "bloqueado") {
+                document.body.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; text-align:center;">
+                        <h1 style="color:#f44336;">Acesso Negado 🛑</h1>
+                        <p style="color:#aaa; max-width:400px;">Seu endereço de IP foi bloqueado por mau uso ou envio de informações falsas no sistema.</p>
+                    </div>`;
+                return;
+            }
+
             atualizarDashboardCompleto(respostaAPI);
         } catch (err) {
             console.error("Erro ao contatar API. Mostrando fallback.", err);
-            // Fallback interativo para que possa ver o design no Editor
             atualizarDashboardCompleto({
                 historico: [1025, 976, 1045, 1031, 1019, 1047, 1044, 1042, 1024, 1043],
                 historicoAcabou: [1050, 1000, 1070, 1055, 1040, 1080, 1072, 1060, 1050, 1065],
@@ -407,8 +428,15 @@
         loading.style.display = 'block';
 
         try {
-            let res = await fetch(`${API_URL}?action=${acao}`);
+            // Agora sim passa o IP de forma 100% dinâmica e segura!
+            let res = await fetch(`${API_URL}?action=${acao}&ip=${userIp}`);
             let respostaAPI = await res.json(); 
+
+            if (respostaAPI.status === "bloqueado") {
+                alert("Você foi bloqueado por mau uso do sistema.");
+                location.reload();
+                return;
+            }
             atualizarDashboardCompleto(respostaAPI);
         } catch (err) {
             alert("Erro ao comunicar com o servidor do Google.");
