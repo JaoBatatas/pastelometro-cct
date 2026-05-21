@@ -501,19 +501,20 @@
             userUid = obterOuCriarUID(); // Gera/Lê UID persistente
             await obterIP(); // Obtém o IP da rede
             
-            let res = await fetch(`${API_URL}?action=consultar&ip=${userIp}&uid=${userUid}`);
+            // let res = await fetch(`${API_URL}?action=consultar&ip=${userIp}&uid=${userUid}`);
+            let res = await fetch(API_URL);
             let respostaAPI = await res.json(); 
 
             // Bloqueia em definitivo se o UID ou IP estiver banido
-            if (respostaAPI.status === "bloqueado") {
-                document.body.innerHTML = `
-                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; text-align:center; padding: 20px;">
-                        <h1 style="color:#f44336; margin-bottom:10px;">Acesso Negado 🛑</h1>
-                        <p style="color:#aaa; max-width:400px; line-height:1.5;">Seu dispositivo foi suspenso por atividade inadequada ou envio de informações falsas no sistema.</p>
-                        <small style="color:#555; margin-top: 15px;">ID do dispositivo: ${userUid}</small>
-                    </div>`;
-                return;
-            }
+            // if (respostaAPI.status === "bloqueado") {
+            //     document.body.innerHTML = `
+            //         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; text-align:center; padding: 20px;">
+            //             <h1 style="color:#f44336; margin-bottom:10px;">Acesso Negado 🛑</h1>
+            //             <p style="color:#aaa; max-width:400px; line-height:1.5;">Seu dispositivo foi suspenso por atividade inadequada ou envio de informações falsas no sistema.</p>
+            //             <small style="color:#555; margin-top: 15px;">ID do dispositivo: ${userUid}</small>
+            //         </div>`;
+            //     return;
+            // }
 
             atualizarDashboardCompleto(respostaAPI);
         } catch (err) {
